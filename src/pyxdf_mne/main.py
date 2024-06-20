@@ -28,10 +28,18 @@ def get_channel_info(stream):
     ch_info['labels'] = list()
     ch_info['type'] = list()
     ch_info['unit'] = list()
+
+    try:
+        channel_desc = stream['info']['desc'][0]['channels'][0]['channel']
+    except Exception as e:
+        print(e)
+        return None
+
     for ch in stream['info']['desc'][0]['channels'][0]['channel']:
         ch_info['labels'].append(ch['label'][0])
         ch_info['type'].append(ch['type'][0].lower())
         ch_info['unit'].append(ch['unit'][0])
+
     return ch_info
 
 def read_raw_xdf(fname, ref_time, precise = False):
@@ -62,11 +70,17 @@ def read_raw_xdf(fname, ref_time, precise = False):
     times = np.array(eeg['time_stamps'])
     
     fs = eeg['info']['nominal_srate'][0]
-    n_channels = eeg['info']['channel_count'][0]
+    n_channels = int(eeg['info']['channel_count'][0])
     ch_info = get_channel_info(eeg)
+
     
-    raw = mne.io.RawArray(data = data,
-                          info = mne.create_info(ch_names = ch_info['labels'], sfreq = fs, ch_types = ch_info['type']))
+    
+    if ch_info is None:
+        raw = mne.io.RawArray(data = data,
+                              info = mne.create_info(ch_names = n_channels, sfreq = fs, ch_types = ['eeg' for m in range(n_channels)]))
+    else:
+        raw = mne.io.RawArray(data = data,
+                              info = mne.create_info(ch_names = ch_info['labels'], sfreq = fs, ch_types = ch_info['type']))
     
 
     if marker is not None:
